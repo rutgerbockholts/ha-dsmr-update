@@ -19,6 +19,7 @@ exec >>"$LOG" 2>&1
 exec 9>/run/lock/update-dsmr.lock
 flock -n 9 || { log "Another DSMR update is running, exiting."; exit 0; }
 
+# shellcheck disable=SC2034  # used by qnap_run in dsmr-common.sh
 STAMP=$(date +%Y%m%d_%H%M%S)
 log "===== DSMR update started ====="
 publish_status running "Update started"

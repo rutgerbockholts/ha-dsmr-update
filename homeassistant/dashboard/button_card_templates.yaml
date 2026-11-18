@@ -1,0 +1,151 @@
+# custom:button-card templates used by the DSMR update card.
+# Add these under `button_card_templates:` in the raw configuration of your dashboard
+# (Dashboard > three dots > Edit > three dots > Raw configuration editor).
+# Requires the custom button-card from HACS / the Marketplace.
+#
+# app_update builds every entity name from `variables.app`:
+#   sensor.mqtt_<app>_update_available / _current_version / _latest_version
+#   input_boolean.<app>_update_running
+#   script.proxmox_update_<app>      (override with variables.script)
+button_card_templates:
+  update_panel:
+    show_state: false
+    show_label: false
+    show_icon: true
+    show_name: true
+    tap_action:
+      action: none
+    styles:
+      card:
+      - border-radius: 16px
+      - padding: 18px 20px
+      - background: transparent
+      - border: 2px solid var(--info-color)
+      - box-shadow: 0 2px 8px rgba(0,0,0,0.20)
+      - overflow: hidden
+      grid:
+      - grid-template-columns: 42px 1fr auto
+      - column-gap: 12px
+      icon:
+      - width: 28px
+      - color: var(--primary-text-color)
+      name:
+      - justify-self: start
+      - align-self: center
+      - font-size: 17px
+      - font-weight: 600
+      - color: var(--primary-text-color)
+  pill_button:
+    show_icon: true
+    show_name: true
+    show_state: false
+    icon: mdi:refresh
+    styles:
+      card:
+      - border-radius: 10px
+      - padding: 9px 16px
+      - box-shadow: none
+      - border: none
+      - background: var(--primary-color)
+      - cursor: pointer
+      grid:
+      - grid-template-areas: '"i n"'
+      - grid-template-columns: 18px auto
+      - column-gap: 7px
+      icon:
+      - width: 17px
+      - color: white
+      name:
+      - font-size: 13px
+      - font-weight: 700
+      - color: white
+    extra_styles: |
+      #container { justify-content: center; }
+  app_update:
+    template: update_panel
+    variables:
+      app: example
+      repo: owner/repo
+      confirm: Update now?
+      st: |
+        [[[
+          const a = variables.app;
+          const s = id => states[id]?.state;
+          return {
+            running: s(`input_boolean.${a}_update_running`) === 'on',
+            avail: ['true', 'on', '1', 'yes'].includes(String(s(`sensor.mqtt_${a}_update_available`) ?? '').toLowerCase()),
+            current: s(`sensor.mqtt_${a}_current_version`) ?? 'Unknown',
+            latest: s(`sensor.mqtt_${a}_latest_version`) ?? 'Unknown'
+          };
+        ]]]
+    styles:
+      grid:
+      - grid-template-areas: '"i n status" "i versions update" "i release update"'
+      - grid-template-rows: 30px 28px 28px
+      custom_fields:
+        status:
+        - justify-self: end
+        - align-self: center
+        versions:
+        - justify-self: start
+        - align-self: center
+        release:
+        - justify-self: start
+        - align-self: center
+        update:
+        - justify-self: end
+        - align-self: center
+    custom_fields:
+      status: |
+        [[[
+          const s = variables.st;
+          const [t, c] = s.running ? ['Updating', '#ffb74d'] : s.avail ? ['Update available', '#ffb74d'] : ['Up to date', '#66bb6a'];
+          return `<span style="color:${c};font-size:13px;font-weight:600">● ${t}</span>`;
+        ]]]
+      versions: |
+        [[[
+          const s = variables.st, m = 'color:var(--secondary-text-color)';
+          return `<div style="display:flex;align-items:center;gap:8px;font-size:14px;white-space:nowrap">
+            <span style="${m}">Current</span><strong>${s.current}</strong>
+            <span style="${m}">→ Latest</span><strong>${s.latest}</strong></div>`;
+        ]]]
+      release: |
+        [[[
+          return `<a href="https://github.com/${variables.repo}/releases" target="_blank" rel="noopener"
+            style="font-size:13px;font-weight:600;color:var(--primary-color)">Release notes ↗</a>`;
+        ]]]
+      update:
+        card:
+          type: custom:button-card
+          template: pill_button
+          icon: '[[[ return variables.st.running ? "mdi:loading" : "mdi:update" ]]]'
+          name: '[[[ const s = variables.st; return s.running ? "UPDATING" : s.avail ? "UPDATE" : "UP TO DATE" ]]]'
+          tap_action:
+            action: '[[[ const s = variables.st; return !s.running && s.avail ? "perform-action" : "none" ]]]'
+            perform_action: '[[[ return `script.proxmox_update_${variables.script ?? variables.app}` ]]]'
+            confirmation:
+              text: '[[[ return variables.confirm ]]]'
+          styles:
+            card:
+            - background: |
+                [[[ const s = variables.st;
+                    return s.running ? 'rgba(255,183,77,0.18)' : s.avail ? 'var(--primary-color)' : 'rgba(255,255,255,0.06)' ]]]
+            - cursor: '[[[ const s = variables.st; return !s.running && s.avail ? "pointer" : "default" ]]]'
+            icon:
+            - color: '[[[ return variables.st.running ? "#ffb74d" : "white" ]]]'
+            - animation: '[[[ return variables.st.running ? "app-update-spin 1s linear infinite" : "none" ]]]'
+            name:
+            - color: |
+                [[[ const s = variables.st;
+                    return s.running ? '#ffb74d' : s.avail ? 'white' : 'var(--secondary-text-color)' ]]]
+          extra_styles: |
+            @keyframes app-update-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+            #container { justify-content: center; }
+    extra_styles: |
+      @media (max-width: 600px) {
+        ha-card { padding: 14px 16px !important; }
+        #container { grid-template-columns: 32px minmax(0, 1fr) auto !important; grid-template-rows: 32px !important; grid-auto-rows: auto !important; row-gap: 8px !important; column-gap: 10px !important; grid-template-areas: "i n status" "versions versions versions" "release release release" "update update update" !important; }
+        #versions, #release { justify-self: start !important; white-space: normal !important; overflow: visible !important; }
+        #update { justify-self: stretch !important; width: 100%; }
+        #update > * { display: block; width: 100%; }
+      }

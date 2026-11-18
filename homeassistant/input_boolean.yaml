@@ -1,0 +1,8 @@
+# Helper that tells the card an update is running.
+# Easiest: create it in the UI (Settings > Devices & services > Helpers > Toggle)
+# with the name "DSMR Update Running" -> input_boolean.dsmr_update_running
+# or in YAML:
+input_boolean:
+  dsmr_update_running:
+    name: DSMR Update Running
+    icon: mdi:progress-download

@@ -1,0 +1,46 @@
+# Example DSMR Reader stack for QNAP Container Station (or any Docker host).
+# The interesting part for this repo is the `volumes:` entry of the dsmr service:
+# it gives DSMR Reader's built-in daily backup (/app/backups) a writable home on the NAS.
+# After the first `docker compose up -d`, give that folder to the container user once:
+#   docker exec -u 0 dsmr chown -R app:app /app/backups
+services:
+  dsmrdb:
+    image: postgres:16-alpine            # pin the major version
+    container_name: dsmrdb
+    restart: always
+    environment:
+      - TZ=Europe/Amsterdam
+      - POSTGRES_USER=dsmrreader
+      - POSTGRES_PASSWORD=change-me
+      - POSTGRES_DB=dsmrreader
+    volumes:
+      - ./dsmrdb:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dsmrreader"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  dsmr:
+    image: ghcr.io/xirixiz/dsmr-reader-docker:latest
+    container_name: dsmr
+    restart: always
+    depends_on:
+      dsmrdb:
+        condition: service_healthy
+    environment:
+      - TZ=Europe/Amsterdam
+      - DJANGO_TIME_ZONE=Europe/Amsterdam
+      - DJANGO_DATABASE_HOST=dsmrdb
+      - DJANGO_DATABASE_PORT=5432
+      - DJANGO_DATABASE_NAME=dsmrreader
+      - DJANGO_DATABASE_USER=dsmrreader
+      - DJANGO_DATABASE_PASSWORD=change-me
+      - DSMRREADER_ADMIN_USER=admin
+      - DSMRREADER_ADMIN_PASSWORD=change-me
+    ports:
+      - "7777:80"
+    devices:
+      - "/dev/ttyUSB0:/dev/ttyUSB0"
+    volumes:
+      - /share/CACHEDEV1_DATA/HASS-Backups/dsmr/daily:/app/backups

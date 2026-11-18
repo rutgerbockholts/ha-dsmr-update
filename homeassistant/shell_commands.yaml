@@ -1,0 +1,21 @@
+# shell_command: entries. Home Assistant connects to the Proxmox host (where the scripts live).
+# Create the key in /config/.ssh and add its public key to root's authorized_keys on Proxmox.
+# The update command returns immediately (nohup + background), so it stays under the
+# 60 second shell_command limit.
+proxmox_check_dsmr: >-
+  ssh -i /config/.ssh/id_ed25519_proxmox
+  -o UserKnownHostsFile=/config/.ssh/known_hosts
+  -o StrictHostKeyChecking=accept-new
+  -o BatchMode=yes
+  -o ConnectTimeout=10
+  root@192.168.1.5
+  "/opt/scripts/dsmr-update-check.sh >> /var/log/dsmr-update-check.log 2>&1"
+
+proxmox_update_dsmr: >-
+  ssh -i /config/.ssh/id_ed25519_proxmox
+  -o UserKnownHostsFile=/config/.ssh/known_hosts
+  -o StrictHostKeyChecking=accept-new
+  -o BatchMode=yes
+  -o ConnectTimeout=10
+  root@192.168.1.5
+  "nohup /opt/scripts/update-dsmr.sh > /dev/null 2>&1 < /dev/null &"

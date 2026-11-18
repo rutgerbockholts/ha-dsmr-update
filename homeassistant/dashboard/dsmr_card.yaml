@@ -1,0 +1,32 @@
+# The DSMR Reader update card. Needs the templates in button_card_templates.yaml.
+type: custom:button-card
+template: app_update
+entity: sensor.mqtt_dsmr_update_available
+name: DSMR Reader
+icon: mdi:meter-electric
+triggers_update:
+  - sensor.mqtt_dsmr_update_available
+  - sensor.mqtt_dsmr_current_version
+  - sensor.mqtt_dsmr_latest_version
+  - input_boolean.dsmr_update_running
+  - sensor.mqtt_dsmr_update_status
+variables:
+  app: dsmr
+  repo: xirixiz/dsmr-reader-docker
+  confirm: |-
+    Update DSMR Reader now?
+    The database is backed up first, then the containers restart. Telegrams pause for about a minute.
+custom_fields:
+  status:
+    card:
+      type: custom:button-card
+      template: pill_button
+      name: REFRESH
+      tap_action:
+        action: perform-action
+        perform_action: shell_command.proxmox_check_dsmr
+styles:
+  card:
+    - background-image: >-
+        [[[ return (['true', 'on', '1'].includes(String(entity?.state).toLowerCase()))
+        ? 'linear-gradient(rgba(255,210,63,0.15), rgba(255,210,63,0.15))' : 'none'; ]]]

@@ -1,0 +1,70 @@
+# Script: script.proxmox_update_dsmr  (Settings > Automations & scenes > Scripts > Add > Edit in YAML)
+# Starts the update on Proxmox, waits for the result over MQTT and double-checks that
+# Home Assistant itself receives fresh readings. Change sensor.dsmr_reading_timestamp
+# if your DSMR Reader telegram timestamp sensor has another entity ID.
+alias: Proxmox - Update DSMR
+description: Runs update-dsmr.sh on Proxmox (backup, pull, restart, verify)
+icon: mdi:meter-electric
+mode: single
+sequence:
+  - condition: state
+    entity_id: sensor.mqtt_dsmr_update_available
+    state: "true"
+  - variables:
+      started: "{{ now().timestamp() }}"
+  - action: input_boolean.turn_on
+    target:
+      entity_id: input_boolean.dsmr_update_running
+  - action: shell_command.proxmox_update_dsmr
+    response_variable: ssh_result
+  - if:
+      - condition: template
+        value_template: "{{ ssh_result.returncode != 0 }}"
+    then:
+      - action: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.dsmr_update_running
+      - stop: SSH to Proxmox failed
+        error: true
+  - alias: Wait for the update script to report ok/failed
+    wait_template: >-
+      {{ states('sensor.mqtt_dsmr_update_status') in ['ok', 'failed']
+         and as_timestamp(state_attr('sensor.mqtt_dsmr_update_status', 'finished'), 0) > started }}
+    timeout: "00:30:00"
+    continue_on_timeout: true
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ not wait.completed }}"
+        sequence:
+          - action: persistent_notification.create
+            data:
+              title: DSMR update
+              message: No result after 30 min. Check /var/log/update-dsmr.log on Proxmox.
+      - conditions:
+          - condition: state
+            entity_id: sensor.mqtt_dsmr_update_status
+            state: failed
+        sequence:
+          - action: persistent_notification.create
+            data:
+              title: DSMR update failed
+              message: "{{ state_attr('sensor.mqtt_dsmr_update_status', 'message') }}"
+    default:
+      - alias: Double-check Home Assistant receives new readings
+        wait_template: "{{ as_timestamp(states('sensor.dsmr_reading_timestamp'), 0) > started }}"
+        timeout: "00:05:00"
+        continue_on_timeout: true
+      - if:
+          - condition: template
+            value_template: "{{ not wait.completed }}"
+        then:
+          - action: persistent_notification.create
+            data:
+              title: DSMR update
+              message: >-
+                DSMR Reader was updated, but Home Assistant has not received a new reading
+                within 5 min. Check the MQTT settings in DSMR Reader.
+  - action: input_boolean.turn_off
+    target:
+      entity_id: input_boolean.dsmr_update_running

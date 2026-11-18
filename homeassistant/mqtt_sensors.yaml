@@ -1,0 +1,34 @@
+# MQTT sensors for the DSMR update card.
+# Put these in the `sensor:` list of your MQTT configuration (NOT under binary_sensor:), e.g.
+#
+# mqtt:
+#   sensor:
+#     - name: ...
+#
+# Topics match MQTT_BASE=dsmr/ha-update in dsmr-update.conf.
+- name: "MQTT DSMR Update Available"
+  unique_id: mqtt_dsmr_update_available
+  state_topic: "dsmr/ha-update/update_available"
+  icon: mdi:update
+
+- name: "MQTT DSMR Current Version"
+  unique_id: mqtt_dsmr_current_version
+  state_topic: "dsmr/ha-update/current_version"
+  icon: mdi:tag
+
+- name: "MQTT DSMR Latest Version"
+  unique_id: mqtt_dsmr_latest_version
+  state_topic: "dsmr/ha-update/latest_version"
+  icon: mdi:tag-arrow-up
+
+- name: "MQTT DSMR Last Check"
+  unique_id: mqtt_dsmr_last_check
+  state_topic: "dsmr/ha-update/last_check"
+  device_class: timestamp
+
+- name: "MQTT DSMR Update Status"
+  unique_id: mqtt_dsmr_update_status
+  state_topic: "dsmr/ha-update/update_status"
+  value_template: "{{ value_json.state }}"
+  json_attributes_topic: "dsmr/ha-update/update_status"
+  icon: mdi:progress-check

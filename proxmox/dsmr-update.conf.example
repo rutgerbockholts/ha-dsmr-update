@@ -1,0 +1,36 @@
+# /opt/scripts/dsmr-update.conf
+# Shared settings for dsmr-update-check.sh and update-dsmr.sh.
+# Copy to /opt/scripts/dsmr-update.conf and run: chmod 600 /opt/scripts/dsmr-update.conf
+
+# --- NAS running DSMR Reader in Docker (written for QNAP Container Station) ---
+QNAP_HOST=192.168.1.10
+QNAP_USER=youruser                # must be allowed to run docker (QNAP: administrators group)
+# Use an SSH key (recommended: ssh-copy-id youruser@192.168.1.10) and leave QNAP_PASS empty,
+# or fill in the password and install sshpass (apt install sshpass).
+QNAP_PASS=""
+QNAP_KEY=""                       # e.g. /root/.ssh/id_ed25519 (empty = ssh default key)
+
+COMPOSE_DIR=/share/CACHEDEV1_DATA/Container/dsmr
+DSMR_SERVICE=dsmr                 # compose SERVICE name (see the SERVICE column of `docker compose ps`)
+DSMR_APP_DIR=/app                 # app folder inside the xirixiz/dsmr-reader-docker image
+PULL_SERVICES="dsmr"              # services to pull. Add the database service only if its
+                                  # image tag is pinned to a major version (e.g. postgres:16-alpine)
+DB_CONTAINER=dsmrdb               # container name of PostgreSQL
+DB_USER=dsmrreader
+DB_NAME=dsmrreader
+
+# Pre-update backups (pg_dump + copy of docker-compose.yml).
+# Relative paths are relative to COMPOSE_DIR. The SSH user must be able to write here.
+BACKUP_DIR=backups
+BACKUP_KEEP=5                     # number of pre-update DB dumps to keep
+
+# --- Verification after the update ---
+DSMR_URL="http://192.168.1.10:7777/"   # DSMR Reader web UI, empty = skip the HTTP check
+VERIFY_TIMEOUT=300                # seconds to wait for a fresh telegram after the restart
+
+# --- MQTT broker that Home Assistant uses ---
+MQTT_HOST=192.168.1.20
+MQTT_PORT=1883
+MQTT_USER=""
+MQTT_PASS=""
+MQTT_BASE=dsmr/ha-update          # topic prefix, no leading slash
